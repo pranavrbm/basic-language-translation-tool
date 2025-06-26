@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>Language Translator</title>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				max-width: 700px;
+				margin: auto;
+				padding: 20px;
+				transition: background 0.3s, color 0.3s;
+			}
+			textarea,
+			select,
+			button {
+				width: 100%;
+				padding: 10px;
+				margin: 10px 0;
+				font-size: 16px;
+			}
+			.dark-mode {
+				background-color: #1e1e1e;
+				color: #f0f0f0;
+			}
+			.dark-mode textarea,
+			.dark-mode select {
+				background-color: #333;
+				color: #f0f0f0;
+			}
+			#history {
+				border-top: 1px solid #ccc;
+				margin-top: 20px;
+			}
+			.history-entry {
+				margin-top: 10px;
+				padding: 10px;
+				border-bottom: 1px dashed #aaa;
+			}
+			.controls {
+				display: flex;
+				gap: 10px;
+				flex-wrap: wrap;
+			}
+			@media (max-width: 600px) {
+				.controls {
+					flex-direction: column;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<h2>🌍 Language Translator</h2>
+
+		<textarea
+			id="inputText"
+			rows="4"
+			placeholder="Enter text..."></textarea>
+
+		<label>From:</label>
+		<select id="sourceLang">
+			<option value="auto">Auto Detect</option>
+			<option value="en">English</option>
+			<option value="hi">Hindi</option>
+			<option value="es">Spanish</option>
+			<option value="fr">French</option>
+		</select>
+
+		<label>To:</label>
+		<select id="targetLang">
+			<option value="hi">Hindi</option>
+			<option value="en">English</option>
+			<option value="es">Spanish</option>
+			<option value="fr">French</option>
+		</select>
+
+		<div class="controls">
+			<button onclick="translateText()">Translate</button>
+			<button onclick="swapLanguages()">Swap</button>
+			<button onclick="speakInput()">🔊 Speak Input</button>
+			<button onclick="speakOutput()">🔊 Speak Output</button>
+			<button onclick="copyText()">📋 Copy</button>
+			<button onclick="downloadText()">📄 Download</button>
+			<button onclick="toggleDarkMode()">🌓 Dark Mode</button>
+		</div>
+
+		<h3>Translated Text:</h3>
+		<textarea
+			id="outputText"
+			rows="4"
+			readonly></textarea>
+
+		<h3>🕘 Translation History</h3>
+		<div id="history"></div>
+
+		<script>
+			const inputText = document.getElementById("inputText");
+			const outputText = document.getElementById("outputText");
+			const sourceLang = document.getElementById("sourceLang");
+			const targetLang = document.getElementById("targetLang");
+			const historyDiv = document.getElementById("history");
+
+			async function translateText() {
+				const text = document.getElementById("inputText").value.trim();
+				if (!text) return;
+
+				const source = document.getElementById("sourceLang").value;
+				const target = document.getElementById("targetLang").value;
+
+				const res = await fetch("http://localhost:3000/api/translate", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ text, source, target }),
+				});
+
+				const data = await res.json();
+				console.log(data);
+				if (data.error) {
+					alert("Error: " + data.error.message);
+					return;
+				}
+
+				document.getElementById("outputText").value =
+					data.translatedText;
+				saveToHistory(text, data.translatedText);
+			}
+
+			function swapLanguages() {
+				[sourceLang.value, targetLang.value] = [
+					targetLang.value,
+					sourceLang.value,
+				];
+			}
+
+			function speakInput() {
+				const text = inputText.value;
+				if (text) {
+					const utter = new SpeechSynthesisUtterance(text);
+					speechSynthesis.speak(utter);
+				}
+			}
+
+			function speakOutput() {
+				const text = outputText.value;
+				if (text) {
+					const utter = new SpeechSynthesisUtterance(text);
+					speechSynthesis.speak(utter);
+				}
+			}
+
+			function copyText() {
+				navigator.clipboard.writeText(outputText.value);
+				alert("Copied to clipboard!");
+			}
+
+			function downloadText() {
+				const blob = new Blob([outputText.value], {
+					type: "text/plain",
+				});
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement("a");
+				a.href = url;
+				a.download = "translation.txt";
+				a.click();
+			}
+
+			function toggleDarkMode() {
+				document.body.classList.toggle("dark-mode");
+			}
+
+			function saveToHistory(input, output) {
+				let history =
+					JSON.parse(localStorage.getItem("translationHistory")) ||
+					[];
+				history.unshift({
+					input,
+					output,
+					time: new Date().toLocaleString(),
+				});
+				localStorage.setItem(
+					"translationHistory",
+					JSON.stringify(history)
+				);
+				renderHistory();
+			}
+
+			function renderHistory() {
+				historyDiv.innerHTML = "";
+				const history =
+					JSON.parse(localStorage.getItem("translationHistory")) ||
+					[];
+				history.slice(0, 5).forEach((entry) => {
+					const div = document.createElement("div");
+					div.className = "history-entry";
+					div.innerHTML = `<b>${entry.time}</b><br><i>${entry.input}</i><br>➡️ ${entry.output}`;
+					historyDiv.appendChild(div);
+				});
+			}
+
+			// Live translation (debounced)
+			let typingTimer;
+			inputText.addEventListener("input", () => {
+				clearTimeout(typingTimer);
+				typingTimer = setTimeout(() => {
+					translateText();
+				}, 1000);
+			});
+
+			// Render history on load
+			renderHistory();
+		</script>
+	</body>
+</html>
