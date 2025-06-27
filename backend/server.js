@@ -47,3 +47,14 @@ app.post("/api/translate", async (req, res) => {
 app.listen(PORT, () => {
 	console.log(`Server running at http://localhost:${PORT}`);
 });
+
+const path = require("path");
+const fs = require("fs");
+
+// Serve static files from the frontend folder
+app.use(express.static(path.join(__dirname, "../frontend")));
+
+// Fallback: serve index.html for any unknown routes (for SPA)
+app.get("*", (req, res) => {
+	res.sendFile(path.join(__dirname, "../frontend/index.html"));
+});
