@@ -2,6 +2,7 @@
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
+require("dotenv").config();
 
 const app = express();
 const PORT = 3000;
@@ -9,7 +10,7 @@ const PORT = 3000;
 app.use(cors());
 app.use(bodyParser.json());
 
-const GOOGLE_API_KEY = "AIzaSyCdKLsqA-qEVDJOK6ykJwO9s_mXnKbsBIg"; // Replace with your actual key
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY; // Replace with your actual key
 app.post("/api/translate", async (req, res) => {
 	const { text, source, target } = req.body;
 
