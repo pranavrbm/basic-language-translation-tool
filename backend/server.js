@@ -2,6 +2,8 @@
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
+const path = require("path");
+const fs = require("fs");
 require("dotenv").config();
 
 const app = express();
@@ -9,6 +11,13 @@ const PORT = 3000;
 
 app.use(cors());
 app.use(bodyParser.json());
+// Serve static files from the frontend folder
+app.use(express.static(path.join(__dirname, "../frontend")));
+
+// Fallback: serve index.html for any unknown routes (for SPA)
+app.get(/.*/, (req, res) => {
+	res.sendFile(path.join(__dirname, "../frontend/index.html"));
+});
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY; // Replace with your actual key
 app.post("/api/translate", async (req, res) => {
@@ -42,17 +51,6 @@ app.post("/api/translate", async (req, res) => {
 			details: err.message,
 		});
 	}
-});
-
-const path = require("path");
-const fs = require("fs");
-
-// Serve static files from the frontend folder
-app.use(express.static(path.join(__dirname, "../frontend")));
-
-// Fallback: serve index.html for any unknown routes (for SPA)
-app.get("*", (req, res) => {
-	res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });
 
 app.listen(PORT, () => {
